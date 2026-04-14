@@ -1,147 +1,51 @@
-# Documentação e Explicação da Arquitetura: Web API Clínica
+# Clínica Web API
 
-Esta documentação foi gerada para auxiliar no entendimento do código e servir de apoio para apresentações acadêmicas. A Web API foi construída seguindo as melhores práticas do **Padrão de Repositório (Repository Pattern)** e **Entity Framework Core**.
+## Visão Geral
+A **Clínica Web API** é uma interface de programação de aplicações (API) desenvolvida em **C#** utilizando o **ASP.NET Core**. Este projeto foi criado com o objetivo de gerenciar os processos de uma clínica multiprofissional, abrangendo o cadastro de pacientes, profissionais de saúde e o agendamento de consultas. O sistema foi desenvolvido com foco em boas práticas de programação, aplicando conceitos de arquitetura robustos para facilitar a manutenção e escalabilidade.
 
-Abaixo está o detalhamento técnico do que cada camada e trecho de código faz no projeto.
+## Tecnologias e Padrões Utilizados
+- **C# / .NET**
+- **ASP.NET Core Web API**
+- **Entity Framework Core (EF Core)**: Como ORM (Object-Relational Mapper) para manipulação e estruturação do banco de dados.
+- **SQLite**: Banco de dados relacional leve e embutido, facilitando o desenvolvimento local, testes e portabilidade acadêmica.
+- **Repository Pattern (Padrão de Repositório)**: Isola a camada de acesso a dados da camada de negócios, proporcionando menor acoplamento e maior testabilidade.
+- **Injeção de Dependência**: Centralizada no `Program.cs` para gerenciar o ciclo de vida dos repositórios e do contexto do banco (Scoped).
+- **Swagger / OpenAPI**: Para documentação interativa e facilidade em testar os endpoints na web.
 
----
+## Estrutura do Projeto
+A arquitetura do projeto foi dividida em camadas lógicas para garantir a separação de responsabilidades (*Separation of Concerns - SoC*):
 
-## 1. Camada de Modelos (`Models`)
-Os modelos representam as entidades (tabelas) do seu banco de dados e as regras básicas de negócio associadas a elas.
+- **Models (`/Models`)**: Contém as classes que representam as entidades de domínio (Paciente, Profissional, Consulta e Enums). É onde ficam regras de negócios intrínsecas aos objetos, como o cálculo dinâmico da `Idade` na classe `Paciente`.
+- **Data (`/Data`)**: Abriga o contexto de dados do Entity Framework (`ClinicaDbContext.cs`). Responsável por mapear as entidades em tabelas do banco de dados utilizando *Fluent API* e *Data Annotations* (Ex.: Relacionando e vinculando consultas e pacientes).
+- **Repositories (`/Repositories`)**: Implementa o acesso ao banco de dados com lógicas customizadas. Centraliza consultas Entity complexas e regras críticas de negócio (Ex.: verificar se não existe sobreposição (*conflito*) de horário antes de efetuar o agendamento).
+- **Controllers (`/Controllers`)**: Camada de entrada das requisições HTTP REST (`GET`, `POST`, `PUT`, `DELETE`). Direciona o tráfego, orquestrando as validações de negócios com o banco através dos Repositórios e devolvendo *HTTP Status Codes* (Ex.: `201 Created` ou `400 Bad Request`).
 
-**Exemplo: `Paciente.cs`**
-```csharp
-public class Paciente
-{
-    public int Id { get; set; }
-    public string Nome { get; set; } = string.Empty;
-    public DateTime DataNascimento { get; set; }
-    // ...
-    
-    public int Idade
-    {
-        get
-        {
-            var today = DateTime.Today;
-            var age = today.Year - DataNascimento.Year;
-            if (DataNascimento.Date > today.AddYears(-age)) age--;
-            return age;
-        }
-    }
-}
-```
-> [!NOTE]
-> **Explicação do Código:**
-> Definimos as propriedades básicas do paciente. O grande destaque é a propriedade computada **`Idade`**. Ela não possui um modificador `set` (isso significa que você não salva a idade diretamente no banco). Toda vez que você pedir a idade na API, o código fará o cálculo dinâmico baseado na data atual e na propriedade `DataNascimento`, verificando precisamente se o paciente já fez aniversário no ano vigente. O `[JsonIgnore]` usado em coleções (como `Consultas`) evita a falha de "referência circular", impedindo loops infinitos quando a API vai exibir a lista de volta para o cliente.
+## Regras de Negócio e Destaques
+1. **Verificação de Conflitos de Horário**: No momento de agendar uma `Consulta` via `POST`, a API aciona o `Repository` para verificar se o Médico ou o Paciente não têm um agendamento no exato mesmo horário no sistema, protegendo a agenda (ignorando consultas marcadas como *Canceladas*).
+2. **Propriedades Computadas (Idade Dinâmica)**: A propriedade `Idade` de um paciente não é fixamente salva no banco de dados. Ela é calculada de forma dinâmica apenas na hora em que é solicitada, com base em sua `DataNascimento` frente à data atual.
+3. **Conversão Limpa de Enums para JSON**: Uso da configuração JSON `JsonStringEnumConverter` para possibilitar a resposta compreensível da API em formato de texto para os estados (`Agendada`, `Concluida`, `Cancelada`) ao invés de exibir números sequenciais numéricos (0, 1, 2) indesejados no Frontend.
+4. **Proteção Circular (*Circular Dependency*)**: Utilização de `[JsonIgnore]` para que na geração de dados Entity complexos as entidades relacionadas não sofram um ciclo infinito que causa a quebra do Payload de retorno.
 
----
+## Como Executar Localmente
 
-## 2. Camada de Banco de Dados (`Data`)
-Serve como a interface e ponte de comunicação entre o seu código C# e o banco de dados (neste caso, o SQLite).
+### Pré-requisitos
+- [.NET SDK](https://dotnet.microsoft.com/download) instalado.
+- Um editor ou IDE como Visual Studio, VS Code, Rider, etc.
 
-**Arquivo: `ClinicaDbContext.cs`**
-```csharp
-public class ClinicaDbContext : DbContext
-{
-    public DbSet<Paciente> Pacientes { get; set; }
-    public DbSet<Profissional> Profissionais { get; set; }
-    public DbSet<Consulta> Consultas { get; set; }
+### Passos:
+1. Navegue pelo terminal até a pasta raiz do projeto (`Clinica-web-api`).
+2. Se o projeto estiver sendo rodado pela primeira vez local e o banco estiver ausente ou desatualizado em formato SQLite (*clinica.db*), você pode acionar as migrations via Entity CLI:
+   ```bash
+   dotnet ef database update
+   ```
+3. Execute o comando para iniciar e rodar a API:
+   ```bash
+   dotnet run
+   ```
+4. O servidor será inicializado (usualmente na porta *5000* e *5001* ou as configuradas em `Properties/launchSettings.json`).
+5. Acesse a interface interativa de UI para visualização e testes dos endpoints pelo seu navegador adicionando `/swagger` à sua URL de debug:
+   `http://localhost:<porta>/swagger`
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Consulta>()
-            .HasOne(c => c.Paciente)
-            .WithMany(p => p.Consultas)
-            .HasForeignKey(c => c.PacienteId);
-        //...
-    }
-}
-```
-> [!NOTE]
-> **Explicação do Código:**
-> * **`DbSet<>`:** Representam as tabelas físicas no banco. São através dessas propriedades que podemos buscar (`Select`), salvar (`Insert`), atualizar (`Update`) e deletar (`Delete`) os registros.
-> * **`OnModelCreating`:** Este trecho mapeia e configura rigorosamente os relacionamentos usando as regras do Entity Framework Core. Estamos traduzindo a arquitetura modelada: *"Uma Consulta pertence a estritamente UM Paciente (`HasOne`), em contrapartida um Paciente pode registrar VÁRIAS Consultas (`WithMany`). A ligação entre as duas tabelas ocorre pelo `PacienteId` (Chave Estrangeira)"*.
-
----
-
-## 3. Padrão de Repositório (`Repositories`)
-Seguindo o princípio de separação de responsabilidades (Repository Pattern), toda a lógica complexa de busca e salvamento no banco de dados não fica no Controlador.
-
-**Exemplo: `ConsultaRepository.cs`**
-```csharp
-public async Task<IEnumerable<Consulta>> GetAllAsync()
-{
-    return await _context.Consultas
-        .Include(c => c.Paciente)
-        .Include(c => c.Profissional)
-        .ToListAsync();
-}
-
-public async Task<bool> ExisteConflitoHorarioAsync(int profissionalId, int pacienteId, DateTime dataHora)
-{
-    return await _context.Consultas.AnyAsync(c => 
-        (c.ProfissionalId == profissionalId || c.PacienteId == pacienteId) && 
-        c.DataHora == dataHora && 
-        c.Status != StatusConsulta.Cancelada);
-}
-```
-
-> [!TIP]
-> **Explicação do Código:**
-> * **`Include()`:** Conhecido como carregamento antecipado (*Eager Loading*). Quando listamos todas as consultas, o comando diz para o ORM preencher os objetos completos de `Paciente` e `Profissional` utilizando tabelas adjacentes (Joins automáticos), evitando expor apenas seus IDs vazios.
-> * **`ExisteConflitoHorarioAsync`:** Trata-se da implementação vital de regra de negócio do sistema. O banco confere a existência de qualquer consulta já registrada com os dados informados (ou para o mesmo médico OU paciente), no mesmo momento específico (`DataHora`). Esta regra inteligente também ignora possíveis consultas que já ostentam o status `Cancelada`.
-
----
-
-## 4. Camada de Controladores (`Controllers`)
-Os Controladores orquestram o tráfego e requisições Web. Eles recebem o pedido (via URL Restful), acionam as validações do Repositório e devolvem os respectivos HTTP Status codes da Web.
-
-**Exemplo Principal: `ConsultasController.cs`**
-```csharp
-[HttpPost]
-public async Task<ActionResult<Consulta>> PostConsulta(Consulta consulta)
-{
-    bool conflito = await _repository.ExisteConflitoHorarioAsync(consulta.ProfissionalId, consulta.PacienteId, consulta.DataHora);
-    
-    if (conflito) {
-        return BadRequest("Conflito de horário! O profissional ou paciente já possui consulta agendada...");
-    }
-
-    await _repository.AddAsync(consulta);
-    return CreatedAtAction(nameof(GetConsulta), new { id = consulta.Id }, consulta);
-}
-```
-
-> [!NOTE]
-> **Explicação do Código:**
-> * **`[HttpPost]`:** Verbo semântico que determina a rota para **Criar/Adicionar** dados. 
-> * **Fluxo de Validação:** A grande vantagem destas camadas fica clara aqui. Antes de aprovar e salvar o agendamento (`AddAsync`), o código verifica se o validador de regra de negócio aponta conflito. Caso encontre um choque de agenda, a criação é sumariamente bloqueada, devolvendo ao frontend do usuário um HTTP Error code `400 (Bad Request)` e a mensagem explícita. Se tudo fluir positivamente, um HTTP Success code `201 (Created)` será disparado confirmando o salvamento.
-
----
-
-## 5. Configuração / Inicialização (`Program.cs`)
-Onde todo o aplicativo web é instanciado, construído e iniciado.
-
-```csharp
-// Adiciona conversor de Enum de Texto
-builder.Services.AddControllers().AddJsonOptions(options => 
-{
-    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-});
-
-// Configuração do Banco de Dados SQLite Local
-builder.Services.AddDbContext<ClinicaDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Injeção de Dependências 
-builder.Services.AddScoped<IPacienteRepository, PacienteRepository>();
-```
-
-> [!NOTE]
-> **Explicação do Código:**
-> * **Conversor de JSON (`JsonStringEnumConverter`):** Instruímos nossa API nas conversões de *Enums*, essenciais em campos como `Status`. Se não incluíssemos essa configuração, a API esperaria e devolveria o status "Agendada" como numeral ex.: `0`. O `Converters` permite que a leitura e salvamento possam ser interpretados textualmente.
-> * **Injeção de Dependência (`AddScoped`):** Essencial para o escopo e performance arquitetural. Informa a classe injetora nativa do ASP.NET: *"Toda vez que a aplicação exigir no controlador os contratos declarados em `IPacienteRepository`, providencie a instancição transparente da minha classe implementada `PacienteRepository`."*
-
-> [!IMPORTANT]
-> **Para defesa ou apresentação do TCC/Projeto:**
-> Abordar tecnicamente a separação entre suas camadas lógicas e o uso do calculador automático do campo (Idade) te garantirá aprovação nas disciplinas de *Padrões de Software (Solid, Design Patterns)*. Focar na coesão do repositório em vez da simples injeção direta de banco no Controller também expõe clareza de projeto de longo prazo.
+## Documentação Adicional
+Preparamos um arquivo detalhando as escolhas minuciosas de engenharia projetada. 
+Consulte fortemente o arquivo auxiliar: [`explicacao_arquitetura.md`](explicacao_arquitetura.md) presente na raiz da hierarquia do projeto que aprofunda nos conceitos e detalhamentos essenciais da lógica idealizadas e direcionadas para apresentação e defesas acadêmicas de TCC e Trabalhos na universidade.
