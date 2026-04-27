@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\andre.prohmann\\.gemini\\antigravity\\scratch\\clinica\\ClinicaApi.csproj": {}
+    "C:\\Users\\andre\\OneDrive\\Documentos\\GitHub\\Clinica-web-api\\ClinicaApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\andre.prohmann\\.gemini\\antigravity\\scratch\\clinica\\ClinicaApi.csproj": {
+    "C:\\Users\\andre\\OneDrive\\Documentos\\GitHub\\Clinica-web-api\\ClinicaApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\andre.prohmann\\.gemini\\antigravity\\scratch\\clinica\\ClinicaApi.csproj",
+        "projectUniqueName": "C:\\Users\\andre\\OneDrive\\Documentos\\GitHub\\Clinica-web-api\\ClinicaApi.csproj",
         "projectName": "ClinicaApi",
-        "projectPath": "C:\\Users\\andre.prohmann\\.gemini\\antigravity\\scratch\\clinica\\ClinicaApi.csproj",
-        "packagesPath": "C:\\Users\\andre.prohmann\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\andre.prohmann\\.gemini\\antigravity\\scratch\\clinica\\obj\\",
+        "projectPath": "C:\\Users\\andre\\OneDrive\\Documentos\\GitHub\\Clinica-web-api\\ClinicaApi.csproj",
+        "packagesPath": "C:\\Users\\andre\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\andre\\OneDrive\\Documentos\\GitHub\\Clinica-web-api\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\andre.prohmann\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\andre\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
